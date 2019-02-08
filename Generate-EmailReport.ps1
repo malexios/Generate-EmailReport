@@ -14,7 +14,14 @@
 ##### Report Variables #####
 $ReportName = "Very Important Stuff That You Need To Know"
 $EmailHeaderText = "Short blurb about the table/tables below.<br>It's going to be HTML, so feel free to include HTML tags."
-$EmailFooterText = "This report ran from xxxx server as a scheduled task and took xxx seconds to complete"
+# You may not want to expose the server name and user. On the other hand, it may be useful eight years from now if the report is still running and no one knows where it's coming from.
+# Wrap the data gathering code in the below snippet to get the time it took to run
+#   $TimeToRun = measure-command {}
+# Format the data like this:
+#   "<p>Script took " + $TimeToRun.hours + " hours and " + $TimeToRun.minutes + " minutes to complete.</p>"
+# StartTime / StopTime
+#   $StartTime = Get-Date -Format hh:MM:ss 
+$EmailFooterText = "This report ran from $env:computername as a scheduled task under the user $env:username.<br>Please contact author@domain.com with any questions."
 
 ##### Email variables #####
 $SMTPServer = "smtp.domain.com"
@@ -26,11 +33,10 @@ $HTML = $null
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
 
 function Build-EmailBody ($ReportName,$EmailHeaderText,$EmailFooterText,$DataObject1,$DataObject2){
-    $HTMLHeader = Begin-HTML -ReportName $ReportName -EmailHeaderText $EmailHeaderText
-    $HTMLTable1 = Add-TableToHtml -Data $DataObject1 -TableDescription "Here is a table of useful information."
-    $HTMLTable2 = Add-TableToHtml -Data $DataObject2 -TableDescription "Here is more useful information."
-    $HTMLClose = Close-HTML
-    $EmailBody = $HTMLHeader + $HTMLTable1 + $HTMLTable2 + $HTMLClose
+    $EmailBody = Begin-HTML -ReportName $ReportName -EmailHeaderText $EmailHeaderText
+    $EmailBody += Add-TableToHtml -Data $DataObject1 -TableDescription "Here is a table of useful information."
+    $EmailBody += Add-TableToHtml -Data $DataObject2 -TableDescription "Here is more useful information."
+    $EmailBody += Close-HTML
     return $EmailBody
 }
 
