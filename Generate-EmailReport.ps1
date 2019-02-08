@@ -9,7 +9,6 @@
     Creation Date:  2/8/19
 #>
 
-
 #----------------------------------------------------------[Declarations]----------------------------------------------------------
 
 ##### Report Variables #####
@@ -17,16 +16,23 @@ $ReportName = "Very Important Stuff That You Need To Know"
 $EmailHeaderText = "Short blurb about the table/tables below.<br>It's going to be HTML, so feel free to include HTML tags."
 $EmailFooterText = "This report ran from xxxx server as a scheduled task and took xxx seconds to complete"
 
-
 ##### Email variables #####
 $SMTPServer = "smtp.domain.com"
 $from = "REPORTSERVER01@domain.com"
 $to = "to@domain.com"
 
-
 $HTML = $null
 
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
+
+function Build-EmailBody ($ReportName,$EmailHeaderText,$EmailFooterText,$DataObject1,$DataObject2){
+    $HTMLHeader = Begin-HTML -ReportName $ReportName -EmailHeaderText $EmailHeaderText
+    $HTMLTable1 = Add-TableToHtml -Data $DataObject1 -TableDescription "Here is a table of useful information."
+    $HTMLTable2 = Add-TableToHtml -Data $DataObject2 -TableDescription "Here is more useful information."
+    $HTMLClose = Close-HTML
+    $EmailBody = $HTMLHeader + $HTMLTable1 + $HTMLTable2 + $HTMLClose
+    return $EmailBody
+}
 
 function Begin-HTML {
     Param(
@@ -75,12 +81,9 @@ function Close-HTML {
 
 #-----------------------------------------------------------[Execution]------------------------------------------------------------
 
-$DataObject1 = Collect-ABunchOFData
+$DataObject1 = Collect-SomeData
 $DataObject2 = Collect-MoreData
 
-$Body = Begin-HTML -ReportName $ReportName -EmailHeaderText $EmailHeaderText
-$Body += Add-TableToHtml -Data $DataObject1 -TableDescription "Here is a table of useful information."
-$Body += Add-TableToHtml -Data $DataObject2 -TableDescription "Here is more useful information."
-$Body += Close-HTML -EmailFooterText $EmailFooterText
+$EmailBody = Build-EmailBody $ReportName $EmailHeaderText $EmailFooterText $DataObject1 $DataObject2
 
-Send-MailMessage -smtpserver $smtpserver -from $from -to $to -subject $ReportName -body $Body -bodyashtml
+Send-MailMessage -smtpserver $smtpserver -from $from -to $to -subject $ReportName -body $EmailBody -bodyashtml
