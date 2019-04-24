@@ -1,77 +1,115 @@
 
 <#
+.SYNOPSIS
+    Accepts an object and generates am HTML report. The data in the object is converted to a table in the report. The returned object can be used as the body of an email or saved as a document.
+
 .DESCRIPTION
-    Template to format data as HTML and include it in an emailed report.
+    There is a bug in ConvertTo-HTML that returns an asterisk for the table header when the data object only has one property.
+
+.PARAMETER ReportName
+    Mandatory
+    string
+    Used as the main title of the report. Appears at the top of the returned HTML string with the current date appended.
+
+.PARAMETER ReportDescription
+    Mandatory
+    string
+    Short description of the report. It will appear under ReportName.
+
+.PARAMETER EmailFooterText
+    string
+    Text to appear below the table. Runas user, server, time, etc. 
+    You may not want to expose the server name and user. On the other hand, it may be useful eight years from now if the report is still running and no one knows where it's coming from.
+    ex:  
+    "This report ran from $env:computername as a scheduled task as the user $env:username at $(Get-Date -Format hh:MM:ss ).<br>Please contact $SupportEmailAddress with any questions."
+
+.PARAMETER HTMLBodyBackgroundColor
+    string
+    Default: white
+    The background color of the returned HTML. Must be a valid HTML color.
+
+.PARAMETER TableBorderColor
+    string
+    Default: black
+    The border color for the table in the returned HTML. Must be a valid HTML color.
+
+.PARAMETER TableHeaderBackgroundColor
+    string
+    Default: white
+    The background color for the table header in the returned HTML. Must be a valid HTML color.
+
+.PARAMETER TableCellBackgroundColor
+    string
+    Default: white
+    The background color for the cells in the returned HTML. Must be a valid HTML color.
+
+.PARAMETER DataObject
+    Used to generate the table
+
+.PARAMETER TableDescription
+    Appears just above the table in the returned HTML.
+
+.INPUTS
+  none
+
+.OUTPUTS
+  none
+
+.NOTES
+    Version:        1.0
+    Author:         Michael Alexios
+    Creation Date:  2/8/19
+  
+.EXAMPLE
+  $HTML = Generate-EmailReport -ReportName "Domain Admins"`
+    -ReportDescription "List of users in the 'Administrators' AD group."`
+    -EmailFooterText "This report ran from $env:computername as a scheduled task as the user $env:username at $(Get-Date -Format hh:MM:ss ).<br>Please contact administrator@domain.com with any questions."`
+    -HTMLBodyBackgroundColor "white"`
+    -TableBorderColor "white"`
+    -TableHeaderBackgroundColor "lightgrey"`
+    -DataObject $DomainAdmins
+    -TableDescription "Domain Administrators"
+
+.TODO
+    Work around bug in ConvertTo-HTML that returns an asterisk for the table header when the data object only has one property.
+    Workaround: $serverObjects | ConvertTo-HTML -Property 'Server Name' -Head $style
 #>
 
+Param(
+    [Parameter(Mandatory)]
+    $ReportName,
+    [Parameter(Mandatory)]
+    $ReportDescription,
+    [Parameter()]
+    $EmailFooterText,
+    [Parameter()]
+    $HTMLBodyBackgroundColor = "white",
+    [Parameter()]
+    $TableBorderColor = "black",
+    [Parameter()]
+    $TableHeaderBackgroundColor = "white",
+    [Parameter()]
+    $TableCellBackgroundColor = "white",
+    [Parameter()]
+    $DataObject,
+    [Parameter()]
+    $TableDescription
+
+)
+
 #----------------------------------------------------------[Declarations]----------------------------------------------------------
-
-##### Report Variables #####
-$ReportName = "Very Important Stuff That You Need To Know"
-$EmailHeaderText = "Short blurb about the table/tables below.<br>It's going to be HTML, so feel free to include HTML tags."
-$AuthorEmailAddress = "author@domain.com"
-# You may not want to expose the server name and user. On the other hand, it may be useful eight years from now if the report is still running and no one knows where it's coming from.
-$EmailFooterText = "This report ran from $env:computername as a scheduled task as the user $env:username at $(Get-Date -Format hh:MM:ss ).<br>Please contact $AuthorEmailAddress with any questions."
-
-##### Report and Table Colors #####
-# Use a supported HTML color name
-# Some common colors: Red,Cyan,Blue,DarkBlue,LightBlue,Purple,Yellow,Lime,Magenta,White,Silver,Grey,Black,Orange,Brown,Maroon,Green,Olive
-$BodyBackgroundColor = "White"
-$TableBorderColor = "Black"
-$TableHeaderBackgroundColor =  "PowderBlue"
-$TableCellBackgroundColor =  "LightGrey"
-
-##### Email Variables #####
-$SMTPServer = "smtp.domain.com"
-$from = "REPORTSERVER01@domain.com"
-$to = "recipient@domain.com"
+$ValidHTMLColors = @("AliceBlue","AntiqueWhite","Aqua","Aquamarine","Azure","Beige","Bisque","Black","BlanchedAlmond","Blue","BlueViolet","Brown","BurlyWood","CadetBlue","Chartreuse","Chocolate","Coral","CornflowerBlue","Cornsilk","Crimson","Cyan","DarkBlue","DarkCyan","DarkGoldenRod","DarkGray","DarkGrey","DarkGreen","DarkKhaki","DarkMagenta","DarkOliveGreen","DarkOrange","DarkOrchid","DarkRed","DarkSalmon","DarkSeaGreen","DarkSlateBlue","DarkSlateGray","DarkSlateGrey","DarkTurquoise","DarkViolet","DeepPink","DeepSkyBlue","DimGray","DimGrey","DodgerBlue","FireBrick","FloralWhite","ForestGreen","Fuchsia","Gainsboro","GhostWhite","Gold","GoldenRod","Gray","Grey","Green","GreenYellow","HoneyDew","HotPink","IndianRed","","Indigo","","Ivory","Khaki","Lavender","LavenderBlush","LawnGreen","LemonChiffon","LightBlue","LightCoral","LightCyan","LightGoldenRodYellow","LightGray","LightGrey","LightGreen","LightPink","LightSalmon","LightSeaGreen","LightSkyBlue","LightSlateGray","LightSlateGrey","LightSteelBlue","LightYellow","Lime","LimeGreen","Linen","Magenta","Maroon","MediumAquaMarine","MediumBlue","MediumOrchid","MediumPurple","MediumSeaGreen","MediumSlateBlue","MediumSpringGreen","MediumTurquoise","MediumVioletRed","MidnightBlue","MintCream","MistyRose","Moccasin","NavajoWhite","Navy","OldLace","Olive","OliveDrab","Orange","OrangeRed","Orchid","PaleGoldenRod","PaleGreen","PaleTurquoise","PaleVioletRed","PapayaWhip","PeachPuff","Peru","Pink","Plum","PowderBlue","Purple","RebeccaPurple","Red","RosyBrown","RoyalBlue","SaddleBrown","Salmon","SandyBrown","SeaGreen","SeaShell","Sienna","Silver","SkyBlue","SlateBlue","SlateGray","SlateGrey","Snow","SpringGreen","SteelBlue","Tan","Teal","Thistle","Tomato","Turquoise","Violet","Wheat","White","WhiteSmoke","Yellow","YellowGreen")
 
 #-----------------------------------------------------------[Functions]------------------------------------------------------------
 
-function Build-EmailBody{
-    Param(
-        [Parameter(Mandatory=$true)]
-        $ReportName,
-        [Parameter(Mandatory=$true)]
-        $EmailHeaderText,
-        [Parameter()]
-        $EmailFooterText,
-        [Parameter()]
-        $BodyBackgroundColor = "white",
-        [Parameter()]
-        $TableBorderColor = "black",
-        [Parameter()]
-        $TableHeaderBackgroundColor = "white",
-        [Parameter()]
-        $TableCellBackgroundColor = "white",
-        [Parameter()]
-        $DataObject1,
-        [Parameter()]
-        $DataObject2
-    )
-
-    $EmailBody = Begin-HTML `
-        -ReportName $ReportName `
-        -EmailHeaderText $EmailHeaderText `
-        -BodyBackgroundColor $BodyBackgroundColor `
-        -TableBorderColor $TableBorderColor `
-        -TableHeaderBackgroundColor $TableHeaderBackgroundColor `
-        -TableCellBackgroundColor $TableCellBackgroundColor
-
-    $EmailBody += Add-TableToHtml -Data $DataObject1 -TableDescription "Here is a table of useful information."
-    $EmailBody += Add-TableToHtml -Data $DataObject2 -TableDescription "Here is more useful information."
-    $EmailBody += Close-HTML -EmailFooterText $EmailFooterText
-    return $EmailBody
-}
-
 function Begin-HTML {
     Param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $ReportName,
-        [Parameter(Mandatory=$true)]
-        $EmailHeaderText,
+        [Parameter(Mandatory)]
+        $ReportDescription,
         [Parameter()]
-        $BodyBackgroundColor,
+        $HTMLBodyBackgroundColor,
         [Parameter()]
         $TableBorderColor,
         [Parameter()]
@@ -82,27 +120,50 @@ function Begin-HTML {
 
     $HTML = "<!DOCTYPE html>"
     $HTML += "<style>"
-    $HTML += "BODY{background-color:$BodyBackgroundColor;}"
+    $HTML += "BODY{background-color:$HTMLBodyBackgroundColor;}"
     $HTML += "TABLE{border-width: 1px;border-style: solid;border-color: $TableBorderColor;border-collapse: collapse;}"
     $HTML += "TH{border-width: 1px;padding: 3px;border-style: solid;border-color: black;background-color:$TableHeaderBackgroundColor}"
     $HTML += "TD{border-width: 1px;padding: 4px;border-style: solid;border-color: black;background-color:$TableCellBackgroundColor}"
     $HTML += "</style>"
     $HTML += "<body>"
     $HTML += "<H2>$ReportName - $(get-date -format d)</H2>"
-    $HTML += "<p>$EmailHeaderText</p>"
+    $HTML += "<p>$ReportDescription</p>"
     return $HTML
 }
 
 function Add-TableToHtml {
     Param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $Data,
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory)]
         $TableDescription
     )
+
     $HTML += "<br/><br/>"
     $HTML += "<b><h3>$TableDescription</h3>"
     $HTML += $Data | ConvertTo-Html -Fragment
+
+    # There is a bug in ConvertTo-HTML that returns an asterisk for the table header when the data object only has one property.
+    # This will not work correctly if there is more them one property in the object
+    # ($ErrorServers | Get-Member -MemberType NoteProperty).count #A note in case I want to make sure there is only one property in the object
+    $PropertyName = (($Data | Get-Member)[-1]).Name
+    $HTML = $HTML -replace '<th>\*</th>',"<th>$PropertyName</th>"
+
+
+    return $HTML
+}
+
+function Add-TableToHtml ($TableData,$TableDescription){
+    $HTML += "<h3>$TableDescription</h3>"
+    if ($TableData.count -gt 0){
+        $HTML += $TableData | ConvertTo-Html -Fragment
+        # There is a bug in ConvertTo-HTML that returns an asterisk for the table header when the data object only has one property.
+        # ($ErrorServers | Get-Member -MemberType NoteProperty).count #in case I want to make sure there is only one property in the object
+        $PropertyName = (($TableData | Get-Member)[-1]).Name
+        $HTML = $HTML -replace '<th>\*</th>',"<th>$PropertyName</th>"
+    }
+    else {$HTML += "<br>No problems found."}
+
     return $HTML
 }
 
@@ -120,19 +181,23 @@ function Close-HTML {
 }
 
 #-----------------------------------------------------------[Execution]------------------------------------------------------------
+if ($ValidHTMLColors -notcontains $HTMLBodyBackgroundColor) {throw "$($HTMLBodyBackgroundColor) is not a valid HTML color"}
+if ($ValidHTMLColors -notcontains $TableBorderColor) {throw "$($TableBorderColor) is not a valid HTML color"}
+if ($ValidHTMLColors -notcontains $TableHeaderBackgroundColor) {throw "$($TableHeaderBackgroundColor) is not a valid HTML color"}
+if ($ValidHTMLColors -notcontains $TableCellBackgroundColor) {throw "$($TableCellBackgroundColor) is not a valid HTML color"}
 
-$DataObject1 = Get-ChildItem "c:\program files"
-$DataObject2 = Get-ChildItem "C:\Program Files (x86)"
 
-$EmailBody = Build-EmailBody `
-    -ReportName $ReportName `
-    -EmailHeaderText $EmailHeaderText `
-    -EmailFooterText $EmailFooterText `
-    -BodyBackgroundColor $BodyBackgroundColor `
-    -TableBorderColor $TableBorderColor `
-    -TableHeaderBackgroundColor $TableHeaderBackgroundColor `
-    -TableCellBackgroundColor $TableCellBackgroundColor `
-    -DataObject1 $DataObject1 `
-    -DataObject2 $DataObject2
 
-Send-MailMessage -smtpserver $smtpserver -from $from -to $to -subject $ReportName -body $EmailBody -bodyashtml
+$EmailBody = Begin-HTML `
+-ReportName $ReportName `
+-ReportDescription $ReportDescription `
+-HTMLBodyBackgroundColor $HTMLBodyBackgroundColor `
+-TableBorderColor $TableBorderColor `
+-TableHeaderBackgroundColor $TableHeaderBackgroundColor `
+-TableCellBackgroundColor $TableCellBackgroundColor
+
+$EmailBody += Add-TableToHtml -Data $DataObject -TableDescription $TableDescription
+$EmailBody += Close-HTML -EmailFooterText $EmailFooterText
+
+
+return $EmailBody
