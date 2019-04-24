@@ -2,7 +2,7 @@
 
 Accepts an object, converts it to a table and generates an HTML report containing that table. The returned object can be used as the body of an email or saved as a document.
 
-# EXAMPLE
+# Example
 
 $ReportDescription = "List of users in the 'Administrators' AD group."
 $EmailFooter = "This report ran from $env:computername as a scheduled task as the user $env:username at $(Get-Date -Format hh:MM:ss ).<br>Please contact administrator@domain.com with any questions."
