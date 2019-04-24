@@ -1,6 +1,6 @@
 # Description
 
-Accepts an object, converts it to a table and generates an HTML report containing that table. The returned object can be used as the body of an email or saved as a document.
+Accepts an object, converts it to a table and generates an HTML report containing that table. The returned object can be used as the body of an email or saved as a document. You can specify the table header, border and cell colors.
 
 # Example
 
